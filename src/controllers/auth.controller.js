@@ -39,3 +39,12 @@ export async function register(req, res) {
   const user = await User.create({ registrationId: registrationId(), name, initiationName, mobileNo, email, city, state, country, profileImage, mobileVerifiedAt: mobileVerified ? now : undefined, emailVerifiedAt: emailVerified ? now : undefined, isMobileVerified: mobileVerified, isEmailVerified: emailVerified, lastLoginAt: now });
   return success(res, { user: publicUser(user), accessToken: createAccessToken(user), refreshToken: createRefreshToken(user) }, 'Registration completed successfully', 201);
 }
+
+export async function login(req, res) {
+  const { destination, channel, proofToken } = req.body;
+  if (!verifyOtpProof(proofToken, destination, channel)) return res.status(400).json({ success: false, statusCode: 400, message: 'Valid OTP verification is required', data: null });
+  const user = await User.findOne({ [channel === 'mobile' ? 'mobileNo' : 'email']: destination, isActive: true });
+  if (!user) return res.status(404).json({ success: false, statusCode: 404, message: 'No registration found for this contact', data: null });
+  user.lastLoginAt = new Date(); await user.save();
+  return success(res, { user: publicUser(user), accessToken: createAccessToken(user), refreshToken: createRefreshToken(user) }, 'Login successful');
+}
