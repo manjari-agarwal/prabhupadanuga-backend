@@ -6,7 +6,7 @@ const publicUser = user => { const { _id, ...data } = user.toObject(); return { 
 
 export const me = (req, res) => success(res, publicUser(req.user));
 export async function updateProfile(req, res) {
-  const allowed = ['name', 'initiationName', 'city', 'state', 'country'];
+  const allowed = ['name', 'initiationName', 'city', 'state', 'country', 'address', 'associatedIskconTemple'];
   allowed.forEach(field => { if (req.body[field] !== undefined) req.user[field] = req.body[field]; });
   await req.user.save(); return success(res, publicUser(req.user), 'Profile updated successfully');
 }

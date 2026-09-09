@@ -24,7 +24,7 @@ router.param('channel', (req, res, next, channel) => {
   next();
 });
 router.get('/me', me);
-router.patch('/me', validate(z.object({ name: z.string().min(2).max(120).optional(), initiationName: z.string().max(120).optional(), city: z.string().max(100).optional(), state: z.string().max(100).optional(), country: z.string().max(100).optional() })), updateProfile);
+router.patch('/me', validate(z.object({ name: z.string().min(2).max(120).optional(), initiationName: z.string().max(120).optional(), city: z.string().max(100).optional(), state: z.string().max(100).optional(), country: z.string().max(100).optional(), address:z.string().max(100).optional(), associatedIskconTemple:z.string().max(100).optional() })), updateProfile);
 router.post('/verify/:channel/request-otp', validate(z.object({})), requestContactOtp);
 router.post('/verify/:channel/confirm', validate(z.object({ otp: z.string().regex(/^\d{4}$/, 'OTP must be exactly 4 digits') })), verifyContact);
 router.post('/profile-picture', upload.single('file'), uploadPicture);
