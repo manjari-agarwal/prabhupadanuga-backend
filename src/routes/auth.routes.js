@@ -14,7 +14,7 @@ router.get('/isd-codes', (req, res) => {
   const data = getCountries().map(countryCode => ({ countryCode, isdCode: `+${getCountryCallingCode(countryCode)}` })).sort((a, b) => a.isdCode.localeCompare(b.isdCode) || a.countryCode.localeCompare(b.countryCode));
   res.json({ success: true, statusCode: 200, message: 'ISD codes fetched successfully', data });
 });
-router.post('/register', validate(z.object({ name: z.string().min(2).max(120), initiationName: z.string().max(120).optional(), mobileNo: mobile, email, city: z.string().max(100).optional(), state: z.string().max(100).optional(), country: z.string().max(100).optional(), profileImage: z.string().url().optional(), mobileProofToken: z.string().optional(), emailProofToken: z.string().optional() }), register));
+router.post('/register', validate(z.object({ name: z.string().min(2).max(120), initiationName: z.string().max(120).optional(), mobileNo: mobile, email, address:z.string().optional(), city: z.string().max(100).optional(), state: z.string().max(100).optional(), country: z.string().max(100).optional(), profileImage: z.string().url().optional(), mobileProofToken: z.string().optional(), emailProofToken: z.string().optional() }), register));
 router.post('/login', validate(z.object({ destination: z.string().min(3), channel: z.enum(['mobile', 'email']), proofToken: z.string() }).superRefine((data, ctx) => { if (data.channel === 'mobile' && !mobile.safeParse(data.destination).success) ctx.addIssue({ code: 'custom', message: 'Invalid international mobile number' }); if (data.channel === 'email' && !email.safeParse(data.destination).success) ctx.addIssue({ code: 'custom', message: 'Invalid email' }); }), login));
 
 export default router;

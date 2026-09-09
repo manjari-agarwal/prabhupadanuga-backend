@@ -29,14 +29,14 @@ export async function confirmOtp(req, res) {
 }
 
 export async function register(req, res) {
-  const { name, initiationName, mobileNo, email, city, state, country, profileImage, mobileProofToken, emailProofToken } = req.body;
+  const { name, initiationName, mobileNo, email, address, city, state, country, profileImage, mobileProofToken, emailProofToken } = req.body;
   const mobileVerified = mobileProofToken ? verifyOtpProof(mobileProofToken, mobileNo, 'mobile') : false;
   const emailVerified = emailProofToken ? verifyOtpProof(emailProofToken, email.toLowerCase(), 'email') : false;
   if (!mobileVerified && !emailVerified) return res.status(400).json({ success: false, statusCode: 400, message: 'Verify either mobile number or email before registration', data: null });
   const existing = await User.findOne({ $or: [{ mobileNo }, { email: email.toLowerCase() }] });
   if (existing) return res.status(409).json({ success: false, statusCode: 409, message: 'Mobile number or email is already registered', data: null });
   const now = new Date();
-  const user = await User.create({ registrationId: registrationId(), name, initiationName, mobileNo, email, city, state, country, profileImage, mobileVerifiedAt: mobileVerified ? now : undefined, emailVerifiedAt: emailVerified ? now : undefined, isMobileVerified: mobileVerified, isEmailVerified: emailVerified, lastLoginAt: now });
+  const user = await User.create({ registrationId: registrationId(), name, initiationName, mobileNo, email, address, city, state, country, profileImage, mobileVerifiedAt: mobileVerified ? now : undefined, emailVerifiedAt: emailVerified ? now : undefined, isMobileVerified: mobileVerified, isEmailVerified: emailVerified, lastLoginAt: now });
   return success(res, { user: publicUser(user), accessToken: createAccessToken(user), refreshToken: createRefreshToken(user) }, 'Registration completed successfully', 201);
 }
 
