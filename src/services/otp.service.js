@@ -8,9 +8,17 @@ function configuredDestinations(value) {
   return new Set(value.split(',').map(item => item.trim().toLowerCase()).filter(Boolean));
 }
 
-function allowedMockDestination(destination, channel) {
-  const list = channel === 'mobile' ? env.MOCK_OTP_ALLOWED_MOBILES : env.MOCK_OTP_ALLOWED_EMAILS;
+function isProductionMockDestination(destination, channel) {
+  const list = channel === 'mobile'
+    ? env.PRODUCTION_MOCK_OTP_ALLOWED_MOBILES
+    : env.PRODUCTION_MOCK_OTP_ALLOWED_EMAILS;
   return configuredDestinations(list).has(destination.toLowerCase());
+}
+
+function shouldUseMockOtp(destination, channel) {
+  // Non-production environments must never incur SMS/email-provider charges.
+  if (env.NODE_ENV !== 'production') return true;
+  return isProductionMockDestination(destination, channel);
 }
 
 async function sendThroughProvider(destination, channel, code) {
@@ -30,17 +38,15 @@ async function sendThroughProvider(destination, channel, code) {
 
 export async function requestOtp(destination, channel) {
   const normalizedDestination = channel === 'email' ? destination.toLowerCase() : destination;
-  if (env.OTP_DELIVERY_MODE === 'mock' && !allowedMockDestination(normalizedDestination, channel)) {
-    throw Object.assign(new Error('This contact is not enabled for mock OTP testing'), { statusCode: 403 });
-  }
-  const code = env.OTP_DELIVERY_MODE === 'mock' ? env.MOCK_OTP_CODE : otpFor();
+  const useMockOtp = shouldUseMockOtp(normalizedDestination, channel);
+  const code = useMockOtp ? env.MOCK_OTP_CODE : otpFor();
   await OtpVerification.deleteMany({ destination: normalizedDestination, channel, verifiedAt: null });
   await OtpVerification.create({
     destination: normalizedDestination, channel, codeHash: await bcrypt.hash(code, 10),
     expiresAt: new Date(Date.now() + 10 * 60 * 1000)
   });
 
-  if (env.OTP_DELIVERY_MODE === 'provider') await sendThroughProvider(normalizedDestination, channel, code);
+  if (!useMockOtp) await sendThroughProvider(normalizedDestination, channel, code);
   // OTP is never returned or logged, in either mock or provider mode.
   return {};
 }

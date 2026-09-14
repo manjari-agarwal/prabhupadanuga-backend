@@ -13,10 +13,11 @@ const schema = z.object({
   REGISTRATION_ID_PREFIX: z.string().default('PPA'),
   MAX_USER_VIDEOS: z.coerce.number().int().min(0).default(2),
   MAX_USER_STORIES: z.coerce.number().int().min(0).default(2),
-  OTP_DELIVERY_MODE: z.enum(['mock', 'provider']).default('mock'),
+  // DEV and test always use MOCK_OTP_CODE. In production, only the contacts
+  // configured below use the mock code; every other contact uses the provider.
   MOCK_OTP_CODE: z.string().regex(/^\d{4}$/, 'MOCK_OTP_CODE must be exactly 4 digits').default('1234'),
-  MOCK_OTP_ALLOWED_MOBILES: z.string().default(''),
-  MOCK_OTP_ALLOWED_EMAILS: z.string().default(''),
+  PRODUCTION_MOCK_OTP_ALLOWED_MOBILES: z.string().default(''),
+  PRODUCTION_MOCK_OTP_ALLOWED_EMAILS: z.string().default(''),
   OTP_API_URL: z.string().optional(),
   OTP_API_KEY: z.string().optional()
 });
