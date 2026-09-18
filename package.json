@@ -21,6 +21,7 @@
     "libphonenumber-js": "^1.12.21",
     "mongoose": "^8.18.0",
     "multer": "^2.0.2",
+    "pdfkit": "^0.17.2",
     "pino": "^9.9.0",
     "pino-http": "^10.5.0",
     "zod": "^4.1.5"

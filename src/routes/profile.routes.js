@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'node:path';
 import { z } from 'zod';
 import { authenticate } from '../middlewares/authenticate.js';
-import { me, updateProfile, requestContactOtp, verifyContact, uploadPicture } from '../controllers/profile.controller.js';
+import { me, updateProfile, requestContactOtp, verifyContact, uploadPicture, deleteAccount, downloadCertificate } from '../controllers/profile.controller.js';
 
 const router = Router();
 const allowedImageExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp']);
@@ -28,4 +28,6 @@ router.patch('/me', validate(z.object({ name: z.string().min(2).max(120).optiona
 router.post('/verify/:channel/request-otp', validate(z.object({})), requestContactOtp);
 router.post('/verify/:channel/confirm', validate(z.object({ otp: z.string().regex(/^\d{4}$/, 'OTP must be exactly 4 digits') })), verifyContact);
 router.post('/profile-picture', upload.single('file'), uploadPicture);
+router.get('/certificate', downloadCertificate);
+router.delete('/me', deleteAccount);
 export default router;

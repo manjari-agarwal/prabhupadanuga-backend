@@ -28,3 +28,6 @@ The application will not start until required secrets and `MONGODB_URI` are conf
 - Required profile fields: name, mobile number, email address. Other fields: initiation name, city, state, country, profile image.
 - Certificate: generated for in-app download/share; email delivery is not in phase 1.
 - Connection Hub: each user may publish up to two videos and two written stories.
+- Countdown: one standard UTC target and identical remaining duration worldwide.
+- Feed: immediate publication outside production; admin approval in production.
+- Story image: optional.

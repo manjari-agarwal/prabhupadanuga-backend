@@ -18,7 +18,8 @@ const userSchema = new mongoose.Schema({
   emailVerifiedAt: Date,
   isMobileVerified: { type: Boolean, default: false },
   isEmailVerified: { type: Boolean, default: false },
-  lastLoginAt: Date
+  lastLoginAt: Date,
+  deletedAt: Date
 }, { timestamps: true, versionKey: false });
 
 export default mongoose.model('User', userSchema);
