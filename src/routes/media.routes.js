@@ -5,6 +5,7 @@ import os from 'node:os';
 import { unlink } from 'node:fs/promises';
 import { authenticate } from '../middlewares/authenticate.js';
 import { uploadMedia } from '../controllers/media.controller.js';
+import { env } from '../config/env.js';
 
 const router = Router();
 const imageExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp']);
@@ -14,7 +15,7 @@ const upload = multer({
     destination: os.tmpdir(),
     filename: (req, file, cb) => cb(null, `prabhupadanuga-${Date.now()}-${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`)
   }),
-  limits: { fileSize: 100 * 1024 * 1024 },
+  limits: { fileSize: env.MAX_TRIBUTE_VIDEO_MB * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const type = req.params.type;
     const extension = path.extname(file.originalname).toLowerCase();

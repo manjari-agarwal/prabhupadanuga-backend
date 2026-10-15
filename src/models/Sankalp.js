@@ -1,0 +1,4 @@
+import mongoose from 'mongoose';
+const schema = new mongoose.Schema({user:{type:mongoose.Schema.Types.ObjectId,ref:'User',required:true,index:true},requestId:{type:String,required:true},frequency:{type:String,enum:['monthly','quarterly','half_yearly','yearly'],required:true},intervalMonths:{type:Number,required:true},amount:{type:Number,required:true,min:1},currency:{type:String,default:'INR',immutable:true},donor:{name:{type:String,required:true},pan:{type:String,default:''},address:{type:String,required:true},pinCode:{type:String,required:true},email:{type:String,required:true},mobileNo:{type:String,required:true}},status:{type:String,enum:['pending_payment_setup','active','cancelled'],default:'pending_payment_setup'},paymentProvider:{type:String,default:null},subscriptionId:{type:String,default:null}},{timestamps:true});
+schema.index({user:1,requestId:1},{unique:true});
+export default mongoose.model('Sankalp',schema);

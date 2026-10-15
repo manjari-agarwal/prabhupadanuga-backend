@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
+import { authenticate } from '../middlewares/authenticate.js';
+import { success } from '../utils/apiResponse.js';
+const router = Router(); router.use(authenticate);
+const item = z.object({ id: z.string().uuid().optional(), name: z.string().trim().min(2).max(120), relation: z.enum(['spouse','son','daughter','other']) });
+router.get('/', (req,res) => success(res, req.user.familyMembers || []));
+router.put('/', async(req,res,next)=>{ try { const input=z.object({ members: z.array(item).max(20) }).parse(req.body); const ids=input.members.map(x=>x.id).filter(Boolean); if (new Set(ids).size!==ids.length) throw Object.assign(new Error('Duplicate family member id'),{statusCode:422}); req.user.familyMembers=input.members.map(x=>({ ...x, id:x.id || randomUUID() })); await req.user.save(); return success(res,req.user.familyMembers,'Family updated'); }catch(err){next(err);} });
+export default router;

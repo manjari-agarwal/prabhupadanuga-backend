@@ -8,6 +8,9 @@ import profileRoutes from './routes/profile.routes.js';
 import hubRoutes from './routes/hub.routes.js';
 import mediaRoutes from './routes/media.routes.js';
 import appRoutes from './routes/app.routes.js';
+import phaseRoutes from './routes/phase.routes.js';
+import familyRoutes from './routes/family.routes.js';
+import engagementRoutes from './routes/engagement.routes.js';
 import { errorHandler, notFound } from './middlewares/errorHandler.js';
 import { env } from './config/env.js';
 
@@ -23,6 +26,9 @@ app.use('/api/v1/profile', profileRoutes);
 app.use('/api/v1/hub', hubRoutes);
 app.use('/api/v1/media', mediaRoutes);
 app.use('/api/v1/app', appRoutes);
+app.use('/api/v1', phaseRoutes);
+app.use('/api/v1/profile/family', familyRoutes);
+app.use('/api/v1',engagementRoutes);
 app.use(notFound);
 app.use(errorHandler);
 

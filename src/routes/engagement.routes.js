@@ -1,0 +1,14 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { authenticate } from '../middlewares/authenticate.js';
+import { calendarMonth, createSankalp, mySankalps, volunteerCategories, registerVolunteer } from '../controllers/engagement.controller.js';
+const router=Router();
+const validate=(schema,key='body')=>(req,res,next)=>{try{const data=schema.parse(req[key]);if(key==='query')req.validatedQuery=data;else req.body=data;next();}catch(e){next(e);}};
+router.use(authenticate);
+router.get('/vaishnava-calendar',validate(z.object({year:z.coerce.number().int().min(2026).max(2026).optional(),month:z.coerce.number().int().min(1).max(12).optional()}).strict(),'query'),calendarMonth);
+const donor=z.object({name:z.string().trim().min(2).max(120),pan:z.union([z.literal(''),z.string().trim().regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/)]).optional().default(''),address:z.string().trim().min(5).max(500),pinCode:z.string().regex(/^\d{6}$/),email:z.string().email(),mobileNo:z.string().regex(/^\+[1-9]\d{6,14}$/)}).strict();
+router.post('/sankalps',validate(z.object({requestId:z.string().uuid(),frequency:z.enum(['monthly','quarterly','half_yearly','yearly']),amount:z.number().int().min(1).max(10000000),donor}).strict()),createSankalp);
+router.get('/sankalps',mySankalps);
+router.get('/volunteer/categories',volunteerCategories);
+router.post('/volunteer/register',validate(z.object({name:z.string().trim().min(2).max(120),email:z.string().email(),mobileNo:z.string().regex(/^\+[1-9]\d{6,14}$/).optional().default(''),categories:z.array(z.string().regex(/^[a-z][a-z0-9_]*$/)).min(1).max(20).refine(a=>new Set(a).size===a.length,'Duplicate categories'),note:z.string().trim().max(1000).optional().default('')}).strict()),registerVolunteer);
+export default router;

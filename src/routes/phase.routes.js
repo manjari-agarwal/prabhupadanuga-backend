@@ -1,0 +1,17 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { authenticate } from '../middlewares/authenticate.js';
+import { bootstrap, content, home, recordDonateClick, donationReport, volunteer, myVolunteer, saveContent, adminVolunteerList, updateVolunteerStatus } from '../controllers/phase.controller.js';
+const router = Router();
+const validate = (schema, key = 'body') => (req,res,next) => { try { const parsed = schema.parse(req[key]); if (key === 'query') req.validatedQuery = parsed; else req[key] = parsed; next(); } catch(error) { next(error); } };
+router.get('/bootstrap', bootstrap);
+router.put('/admin/content/:slug', authenticate, validate(z.object({ title: z.string().trim().min(2).max(200), body: z.string().max(100000).default(''), imageUrl: z.string().url().nullable().optional(), links: z.array(z.object({ label: z.string().trim().min(1).max(80), url: z.string().url() })).max(30).default([]), published: z.boolean().default(false) })), saveContent);
+router.get('/content/:slug', content);
+router.get('/home', authenticate, home);
+router.post('/donate/click', authenticate, validate(z.object({ eventId: z.string().uuid(), source: z.enum(['home','sankalp','menu','other']).default('home') })), recordDonateClick);
+router.get('/donate/report', authenticate, validate(z.object({ from: z.string().date().optional(), to: z.string().date().optional() }).refine(d => !d.from || !d.to || d.from <= d.to, 'from must be before to'),'query'), donationReport);
+router.post('/volunteer', authenticate, validate(z.object({ services: z.array(z.string().trim().min(2).max(80)).min(1).max(20), availability: z.string().trim().max(300).default(''), note: z.string().trim().max(1000).default('') })), volunteer);
+router.get('/volunteer/me', authenticate, myVolunteer);
+router.get('/admin/volunteers', authenticate, validate(z.object({ page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(100).default(20), status: z.enum(['submitted','contacted','approved','closed']).optional() }), 'query'), adminVolunteerList);
+router.patch('/admin/volunteers/:id', authenticate, validate(z.object({ status: z.enum(['submitted','contacted','approved','closed']) })), updateVolunteerStatus);
+export default router;
