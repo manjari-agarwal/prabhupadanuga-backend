@@ -12,6 +12,7 @@ import phaseRoutes from './routes/phase.routes.js';
 import familyRoutes from './routes/family.routes.js';
 import engagementRoutes from './routes/engagement.routes.js';
 import sadhanaRoutes from './routes/sadhana.routes.js';
+import contactRoutes from './routes/contact.routes.js';
 import { errorHandler, notFound } from './middlewares/errorHandler.js';
 import { env } from './config/env.js';
 
@@ -31,6 +32,7 @@ app.use('/api/v1', phaseRoutes);
 app.use('/api/v1/profile/family', familyRoutes);
 app.use('/api/v1',engagementRoutes);
 app.use('/api/v1/sadhana',sadhanaRoutes);
+app.use('/api/v1/contact', contactRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
