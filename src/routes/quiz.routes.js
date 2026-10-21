@@ -1,0 +1,13 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { authenticate } from '../middlewares/authenticate.js';
+import { current,start,submit,history,result } from '../controllers/quiz.controller.js';
+const router=Router();
+router.use(authenticate);
+const validate=(schema)=>(req,res,next)=>{try{req.body=schema.parse(req.body);next();}catch(e){next(e);}};
+router.get('/active',current);
+router.post('/start',start);
+router.get('/history',history);
+router.post('/attempts/:attemptId/submit',validate(z.object({answers:z.array(z.object({questionId:z.string().min(1),selectedOptionIds:z.array(z.string().min(1)).max(4)}).strict())}).strict()),submit);
+router.get('/attempts/:attemptId/result',result);
+export default router;

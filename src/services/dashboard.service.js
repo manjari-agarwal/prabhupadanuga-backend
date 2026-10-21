@@ -1,5 +1,6 @@
 import DailyQuote from '../models/DailyQuote.js';
 import Quiz from '../models/Quiz.js';
+import { quizState, activeQuiz as getActiveQuiz } from './quiz.service.js';
 import Kirtan from '../models/Kirtan.js';
 import { env } from '../config/env.js';
 
@@ -24,14 +25,11 @@ export function countdown(now) {
     remainingSeconds: targetAt ? Math.max(0, Math.floor((targetAt - now) / 1000)) : null
   };
 }
-export async function dailyDashboard(now, timezone) {
+export async function dailyDashboard(now, timezone, user) {
   const date = localDateParts(now, timezone);
   const [quote, activeQuiz, kirtans] = await Promise.all([
     DailyQuote.findOne({ month: date.month, day: date.day, isActive: true }).lean(),
-    Quiz.findOne({ status: 'published', quizDate: date.date, $and: [
-      { $or: [{ startAt: null }, { startAt: { $lte: now } }] },
-      { $or: [{ endAt: null }, { endAt: { $gt: now } }] }
-    ] }).sort({ startAt: 1, _id: 1 }).lean(),
+    getActiveQuiz(now),
     Kirtan.find({ status: 'published', startsAt: { $gte: new Date(now.getTime() - 48 * 60 * 60 * 1000), $lt: new Date(now.getTime() + 48 * 60 * 60 * 1000) } })
       .sort({ startsAt: 1 }).lean()
   ]);
@@ -45,13 +43,7 @@ export async function dailyDashboard(now, timezone) {
   return {
     timezone, localDate: date.date,
     quote: quote ? { id: String(quote._id), day: date.day, month: date.month, englishText: quote.englishText, footnoteEnglish: quote.footnoteEnglish, imageUrl: quote.imageUrl || null } : null,
-    quiz: { available: Boolean(activeQuiz), quiz: activeQuiz ? {
-      id: String(activeQuiz._id), title: activeQuiz.title, description: activeQuiz.description, date: activeQuiz.quizDate,
-      startsAt: activeQuiz.startAt?.toISOString() || null, endsAt: activeQuiz.endAt?.toISOString() || null,
-      durationSeconds: activeQuiz.durationSeconds, maxMarks: activeQuiz.maxMarks, questionCount: activeQuiz.questions.length,
-      questions: activeQuiz.questions.map(question => ({ id: String(question._id), text: question.text, type: question.type, marks: question.marks,
-        options: question.options.map(option => ({ id: option.id, text: option.text })) }))
-    } : null },
+    quiz: user ? await quizState(user, activeQuiz, now) : { available:Boolean(activeQuiz), quiz:activeQuiz?{ id:String(activeQuiz._id), title:activeQuiz.title, questionCount:activeQuiz.questions.length }:null },
     liveKirtan: { available: Boolean(kirtan), isLive: Boolean(currentKirtan), id: kirtan ? String(kirtan._id) : null,
       title: kirtan?.title || null, platform: kirtan?.platform || null, url: kirtan?.url || null,
       startsAt: kirtan?.startsAt.toISOString() || null, endsAt: kirtan?.endsAt?.toISOString() || null },
