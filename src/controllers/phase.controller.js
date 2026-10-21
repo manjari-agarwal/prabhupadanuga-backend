@@ -6,6 +6,7 @@ import HubPost from '../models/HubPost.js';
 import User from '../models/User.js';
 import { success } from '../utils/apiResponse.js';
 import { env } from '../config/env.js';
+import { homeSummary } from '../services/sadhana.service.js';
 
 const PAGE_SLUGS = ['about-srila-prabhupada','contact-us','privacy-policy','terms-and-conditions','prabhupada-letter','login'];
 const contact = () => ({ email: env.PUBLIC_CONTACT_EMAIL || null, phone: env.PUBLIC_CONTACT_PHONE || null, address: env.PUBLIC_CONTACT_ADDRESS || null });
@@ -23,13 +24,14 @@ export async function content(req, res) {
 export async function home(req, res) {
   const now = new Date();
   const timezone = resolveTimezone(req.user.timezone);
-  const [counts, featured, registrationCount, daily] = await Promise.all([
+  const [counts, featured, registrationCount, daily, sadhana] = await Promise.all([
     HubPost.aggregate([{ $match: { author: req.user._id, deletedAt: null } }, { $group: { _id: '$type', count: { $sum: 1 } } }]),
     HubPost.find({ deletedAt: null, status: 'published' }).sort({ createdAt: -1 }).limit(5).populate('author','name initiationName profileImage').lean(),
     User.countDocuments({ isActive: true, deletedAt: null }),
-    dailyDashboard(now, timezone)
+    dailyDashboard(now, timezone),
+    homeSummary(req.user)
   ]);
-  return success(res, { user: { id: req.user.id, name: req.user.name, profileImage: req.user.profileImage || null }, journey: { sankalp: { enabled: false, donateNowUrl: env.DONATE_NOW_URL }, tributes: { videoCount: counts.find(x=>x._id==='tribute')?.count || 0, storyCount: counts.find(x=>x._id==='story')?.count || 0 }, sadhana: { enabled: false } }, quote: daily.quote, timezone: daily.timezone, localDate: daily.localDate, countdown: daily.countdown, quiz: daily.quiz, featuredTributes: featured, certificate: { available: true }, community: { registrationCount }, liveKirtan: daily.liveKirtan });
+  return success(res, { user: { id: req.user.id, name: req.user.name, profileImage: req.user.profileImage || null }, journey: { sankalp: { enabled: false, donateNowUrl: env.DONATE_NOW_URL }, tributes: { videoCount: counts.find(x=>x._id==='tribute')?.count || 0, storyCount: counts.find(x=>x._id==='story')?.count || 0 }, sadhana }, quote: daily.quote, timezone: daily.timezone, localDate: daily.localDate, countdown: daily.countdown, quiz: daily.quiz, featuredTributes: featured, certificate: { available: true }, community: { registrationCount }, liveKirtan: daily.liveKirtan });
 }
 export async function recordDonateClick(req, res) {
   const { eventId, source } = req.body;

@@ -1,0 +1,14 @@
+import {Router} from 'express';
+import {z} from 'zod';
+import {authenticate} from '../middlewares/authenticate.js';
+import {master,saveMaster,savePreferences,day,updateDay,month,download} from '../controllers/sadhana.controller.js';
+const r=Router();r.use(authenticate);
+const validate=schema=>(req,res,next)=>{try{req.body=schema.parse(req.body);next();}catch(e){next(e);}};
+const item=z.object({code:z.string().regex(/^[a-z][a-z0-9_]*$/),target:z.number().min(0).max(100000).optional()});
+r.get('/practices',master);
+r.put('/admin/practices',validate(z.object({code:z.string().regex(/^[a-z][a-z0-9_]*$/),title:z.string().trim().min(2).max(100),subtitle:z.string().max(160).default(''),target:z.number().min(0).default(1),unit:z.enum(['rounds','minutes','sessions','times']).default('times'),sortOrder:z.number().int().default(0),isActive:z.boolean().default(true),attendanceEnabled:z.boolean().default(false)})),saveMaster);
+r.put('/preferences',validate(z.object({practices:z.array(item).min(0).max(40).refine(items=>new Set(items.map(x=>x.code)).size===items.length,'Duplicate code')})),savePreferences);
+r.get('/day',day);
+r.put('/day/:date',validate(z.object({entries:z.array(z.object({code:z.string(),completed:z.boolean().optional(),value:z.number().min(0).max(100000).optional(),comment:z.string().max(2000).optional(),attendance:z.enum(['online','temple','offline_other','not_attended']).nullable().optional()})).min(1).max(40).refine(x=>new Set(x.map(y=>y.code)).size===x.length,'Duplicate code')})),updateDay);
+r.get('/month',month);r.get('/export.csv',download);
+export default r;
