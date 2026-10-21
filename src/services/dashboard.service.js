@@ -27,18 +27,21 @@ export function countdown(now) {
 }
 export async function dailyDashboard(now, timezone, user) {
   const date = localDateParts(now, timezone);
-  const [quote, activeQuiz, kirtans] = await Promise.all([
+  const [quote, activeQuiz, kirtans, featuredKirtan] = await Promise.all([
     DailyQuote.findOne({ month: date.month, day: date.day, isActive: true }).lean(),
     getActiveQuiz(now),
     Kirtan.find({ status: 'published', startsAt: { $gte: new Date(now.getTime() - 48 * 60 * 60 * 1000), $lt: new Date(now.getTime() + 48 * 60 * 60 * 1000) } })
-      .sort({ startsAt: 1 }).lean()
+      .sort({ startsAt: 1 }).lean(),
+    Kirtan.findOne({status: 'published', isFeatured:true}).lean()
   ]);
   const visibleKirtans = kirtans.filter(k => {
     // Show sessions whose actual UTC start falls on user's local calendar day.
     return localDateParts(new Date(k.startsAt), timezone).date === date.date && (!k.endsAt || k.endsAt > now);
   });
-  const currentKirtan = visibleKirtans.find(k => new Date(k.startsAt) <= now && (!k.endsAt || k.endsAt > now));
-  const upcomingKirtan = visibleKirtans.find(k => new Date(k.startsAt) > now);
+  // A selected featured link is authoritative. Do not fall back to unrelated broadcasts.
+  const candidates = featuredKirtan ? visibleKirtans.filter(k => String(k._id)===String(featuredKirtan._id)) : visibleKirtans;
+  const currentKirtan = candidates.find(k => new Date(k.startsAt) <= now && (!k.endsAt || k.endsAt > now));
+  const upcomingKirtan = candidates.find(k => new Date(k.startsAt) > now);
   const kirtan = currentKirtan || upcomingKirtan || null;
   return {
     timezone, localDate: date.date,

@@ -37,7 +37,7 @@ export function resultView(attempt) {
 export async function activeQuiz(now = new Date()) {
   return Quiz.findOne({ status: 'published', isActive: true,
     $and: [ { $or: [{ startAt: null }, { startAt: { $lte: now } }] },
-      { $or: [{ endAt: null }, { endAt: { $gt: now } }] } ] }).select('+questions.correctOptionIds +questions.correctOptionId +questions.explanation').lean();
+      { $or: [{ endAt: null }, { endAt: { $gt: now } }] } ] }).schemaLevelProjections(false).lean();
 }
 export async function finishAttempt(attempt, status, now = new Date()) {
   if (attempt.status !== 'in_progress') return attempt;

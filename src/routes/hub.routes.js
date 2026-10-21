@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../middlewares/authenticate.js';
 import { optionalAuthenticate } from '../middlewares/optionalAuthenticate.js';
-import { listPosts, myPosts, postDetail, createPost, updatePost, deletePost, toggleLike, recordShare, listComments, addComment, updateComment, deleteComment, moderatePost, moderationQueue } from '../controllers/hub.controller.js';
+import { listPosts, myPosts, postDetail, createPost, updatePost, deletePost, toggleLike, recordShare, listComments, addComment, updateComment, deleteComment } from '../controllers/hub.controller.js';
 
 const router = Router();
 export const validate = (schema, location = 'body') => (req, res, next) => {
@@ -23,7 +23,6 @@ const commentSchema = z.object({ text: z.string().trim().min(1).max(1000) });
 
 router.get('/', optionalAuthenticate, validate(paging, 'query'), listPosts);
 router.get('/mine', authenticate, validate(z.object({ type: z.enum(['tribute', 'story']).optional() }), 'query'), myPosts);
-router.get('/moderation/queue', authenticate, validate(z.object({ status: z.enum(['pending', 'rejected']).default('pending'), type: z.enum(['tribute', 'story']).optional(), page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(50).default(20) }), 'query'), moderationQueue);
 router.get('/:id', optionalAuthenticate, postDetail);
 router.post('/', authenticate, validate(createSchema), createPost);
 router.patch('/:id', authenticate, validate(updateSchema), updatePost);
@@ -34,6 +33,5 @@ router.get('/:id/comments', optionalAuthenticate, validate(commentPaging, 'query
 router.post('/:id/comments', authenticate, validate(commentSchema), addComment);
 router.patch('/:id/comments/:commentId', authenticate, validate(commentSchema), updateComment);
 router.delete('/:id/comments/:commentId', authenticate, deleteComment);
-router.patch('/:id/moderation', authenticate, validate(z.object({ status: z.enum(['published', 'rejected']), moderationNote: z.string().trim().max(500).optional() })), moderatePost);
 
 export default router;

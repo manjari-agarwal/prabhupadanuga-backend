@@ -1,5 +1,4 @@
 import { dailyDashboard, resolveTimezone } from '../services/dashboard.service.js';
-import AppContent from '../models/AppContent.js';
 import DonateClick from '../models/DonateClick.js';
 import VolunteerRequest from '../models/VolunteerRequest.js';
 import HubPost from '../models/HubPost.js';
@@ -8,18 +7,10 @@ import { success } from '../utils/apiResponse.js';
 import { env } from '../config/env.js';
 import { homeSummary } from '../services/sadhana.service.js';
 
-const PAGE_SLUGS = ['about-srila-prabhupada','contact-us','privacy-policy','terms-and-conditions','prabhupada-letter','login'];
 const contact = () => ({ email: env.PUBLIC_CONTACT_EMAIL || null, phone: env.PUBLIC_CONTACT_PHONE || null, address: env.PUBLIC_CONTACT_ADDRESS || null });
-export async function bootstrap(req, res) {
-  const pages = await AppContent.find({ slug: { $in: PAGE_SLUGS }, published: true }).select('slug title body imageUrl links version updatedAt').lean();
-  const lookup = Object.fromEntries(pages.map(page => [page.slug, page]));
-  return success(res, { branding: { loginImageUrl: env.LOGIN_IMAGE_URL || null }, contact: contact(), pages: lookup, externalLinks: { donateNow: env.DONATE_NOW_URL }, supportEmail: env.PUBLIC_CONTACT_EMAIL || null });
-}
-export async function content(req, res) {
-  if (!PAGE_SLUGS.includes(req.params.slug)) return res.status(404).json({ success: false, statusCode: 404, message: 'Page not found', data: null });
-  const page = await AppContent.findOne({ slug: req.params.slug, published: true }).select('slug title body imageUrl links version updatedAt').lean();
-  if (!page) return res.status(404).json({ success: false, statusCode: 404, message: 'Page is not published', data: null });
-  return success(res, page);
+// Static mobile-app pages are bundled in the app, not read from MongoDB.
+export async function bootstrap(req,res) {
+ return success(res,{branding:{loginImageUrl:env.LOGIN_IMAGE_URL||null},contact:contact(),pages:{},externalLinks:{donateNow:env.DONATE_NOW_URL},supportEmail:env.PUBLIC_CONTACT_EMAIL||null});
 }
 export async function home(req, res) {
   const now = new Date();
@@ -58,12 +49,6 @@ export async function myVolunteer(req, res) {
   return success(res, await VolunteerRequest.find({ user: req.user._id }).sort({ createdAt: -1 }).lean());
 }
 
-export async function saveContent(req,res) {
-  if (req.user.role !== 'admin') return res.status(403).json({success:false,statusCode:403,message:'Admin access required',data:null});
-  if (!PAGE_SLUGS.includes(req.params.slug)) return res.status(404).json({success:false,statusCode:404,message:'Unknown content slug',data:null});
-  const page = await AppContent.findOneAndUpdate({slug:req.params.slug},{$set:req.body,$setOnInsert:{slug:req.params.slug}}, {upsert:true,new:true,runValidators:true});
-  return success(res,page,'Content saved');
-}
 export async function adminVolunteerList(req,res) {
   if (req.user.role !== 'admin') return res.status(403).json({success:false,statusCode:403,message:'Admin access required',data:null});
   const {page,limit,status} = req.validatedQuery;
