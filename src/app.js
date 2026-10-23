@@ -40,5 +40,4 @@ app.use('/api/v1/quiz', quizRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-
 export default app;
