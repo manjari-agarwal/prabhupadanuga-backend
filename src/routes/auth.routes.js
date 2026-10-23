@@ -24,7 +24,10 @@ router.post('/register', validate(z.object({
   city:z.string().trim().min(1).max(100), state:z.string().trim().min(1).max(100), country:z.string().trim().min(1).max(100),
   pinCode:z.string().trim().max(20).optional(), associatedIskconTemple:z.string().trim().max(100).optional(),
   updatesConsent:z.boolean().optional().default(false),
-  profileImage:z.string().url().optional(), mobileProofToken:z.string().optional(), emailProofToken:z.string().optional()
-}).refine(d => Boolean(d.mobileProofToken || d.emailProofToken), {message:'Verified OTP proof is required'}), register));
+  profileImage:z.string().url().optional(),
+  proofToken:z.string().optional(),
+  mobileProofToken:z.string().optional(),
+  emailProofToken:z.string().optional()
+}).refine(d => Boolean(d.proofToken || d.mobileProofToken || d.emailProofToken), {message:'Verified OTP proof is required'}), register));
 router.post('/login',validate(contactSchema.safeExtend({proofToken:z.string().min(1)}),login));
 export default router;

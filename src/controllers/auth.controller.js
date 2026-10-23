@@ -18,10 +18,31 @@ export async function sendOtp(req, res) {
 export async function confirmOtp(req, res) {
   const { destination, channel, otp } = req.body;
   await verifyOtp(destination, channel, otp);
+
   const normalizedDestination = channel === 'email' ? destination.toLowerCase() : destination;
-  const existingUser = await User.exists({ [channel === 'mobile' ? 'mobileNo' : 'email']: normalizedDestination, [channel === 'mobile' ? 'isMobileVerified' : 'isEmailVerified']: true, isActive: true, deletedAt: null });
-  const user = existingUser ? await User.findById(existingUser._id) : null;
-  if (user) { user.lastLoginAt = new Date(); await user.save(); }
+  const contactField = channel === 'mobile' ? 'mobileNo' : 'email';
+  const user = await User.findOne({
+    [contactField]: normalizedDestination,
+    isActive: true,
+    deletedAt: null
+  });
+
+  // A successful OTP verification proves ownership of this contact. If the
+  // contact already belongs to a registered user, mark that channel verified
+  // and continue directly to the dashboard.
+  if (user) {
+    const now = new Date();
+    if (channel === 'mobile') {
+      user.isMobileVerified = true;
+      user.mobileVerifiedAt = user.mobileVerifiedAt || now;
+    } else {
+      user.isEmailVerified = true;
+      user.emailVerifiedAt = user.emailVerifiedAt || now;
+    }
+    user.lastLoginAt = now;
+    await user.save();
+  }
+
   return success(res, {
     proofToken: createOtpProof(normalizedDestination, channel),
     isRegistered: Boolean(user),
@@ -31,14 +52,21 @@ export async function confirmOtp(req, res) {
 }
 
 export async function register(req, res) {
-  const { name, initiationName, mobileNo, email, address, city, state, country, pinCode, associatedIskconTemple, updatesConsent, profileImage, mobileProofToken, emailProofToken } = req.body;
-  const mobileVerified = mobileProofToken ? verifyProofSafely(mobileProofToken, mobileNo, 'mobile') : false;
-  const emailVerified = emailProofToken ? (email ? verifyProofSafely(emailProofToken, email.toLowerCase(), 'email') : false) : false;
+  const { name, initiationName, mobileNo, email, address, city, state, country, pinCode, associatedIskconTemple, updatesConsent, profileImage, proofToken, mobileProofToken, emailProofToken } = req.body;
+
+  const normalizedEmail = email ? email.toLowerCase() : undefined;
+  // Keep legacy token fields for backward compatibility, but validate every
+  // supplied OTP proof against both registration contacts. This allows FE to
+  // simply send the common `proofToken` returned by /otp/verify and also fixes
+  // older clients that accidentally send an email proof in mobileProofToken.
+  const proofTokens = [...new Set([proofToken, mobileProofToken, emailProofToken].filter(Boolean))];
+  const mobileVerified = proofTokens.some(token => verifyProofSafely(token, mobileNo, 'mobile'));
+  const emailVerified = Boolean(normalizedEmail) && proofTokens.some(token => verifyProofSafely(token, normalizedEmail, 'email'));
   if (!mobileVerified && !emailVerified) return res.status(400).json({ success: false, statusCode: 400, message: 'Verify either mobile number or email before registration', data: null });
-  const existing = await User.findOne({ $or: [{ mobileNo }, ...(email ? [{ email: email.toLowerCase() }] : [])] });
+  const existing = await User.findOne({ $or: [{ mobileNo }, ...(normalizedEmail ? [{ email: normalizedEmail }] : [])] });
   if (existing) return res.status(409).json({ success: false, statusCode: 409, message: 'Mobile number or email is already registered', data: null });
   const now = new Date();
-  const user = await User.create({ registrationId: registrationId(), name, initiationName, mobileNo, ...(email ? {email:email.toLowerCase()} : {}), address, city, state, country, pinCode, associatedIskconTemple, updatesConsent, updatesConsentAt: updatesConsent ? now : undefined, profileImage, mobileVerifiedAt: mobileVerified ? now : undefined, emailVerifiedAt: emailVerified ? now : undefined, isMobileVerified: mobileVerified, isEmailVerified: emailVerified, lastLoginAt: now });
+  const user = await User.create({ registrationId: registrationId(), name, initiationName, mobileNo, ...(normalizedEmail ? {email:normalizedEmail} : {}), address, city, state, country, pinCode, associatedIskconTemple, updatesConsent, updatesConsentAt: updatesConsent ? now : undefined, profileImage, mobileVerifiedAt: mobileVerified ? now : undefined, emailVerifiedAt: emailVerified ? now : undefined, isMobileVerified: mobileVerified, isEmailVerified: emailVerified, lastLoginAt: now });
   return success(res, { user: publicUser(user), accessToken: createAccessToken(user), refreshToken: createRefreshToken(user) }, 'Registration completed successfully', 201);
 }
 
