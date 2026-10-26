@@ -22,12 +22,11 @@ const schema = z.object({
   COUNTDOWN_START_AT: z.string().datetime().optional(),
   COUNTDOWN_TARGET_AT: z.string().datetime().optional(),
   CERTIFICATE_ISSUER_NAME: z.string().default('Prabhupadanuga'),
-  // DEV and test always use MOCK_OTP_CODE. In production, only the contacts
-  // configured below use the mock code; every other contact uses the provider.
+  // Fixed OTP is allowed only for explicitly whitelisted review/test contacts.
+  // Every other destination always receives a freshly generated OTP via the live provider.
   MOCK_OTP_CODE: z.string().regex(/^\d{4}$/, 'MOCK_OTP_CODE must be exactly 4 digits').default('1234'),
-  PRODUCTION_MOCK_OTP_ALLOWED_MOBILES: z.string().default(''),
-  PRODUCTION_MOCK_OTP_ALLOWED_EMAILS: z.string().default(''),
-  OTP_DELIVERY_MODE: z.enum(['mock','live']).default('mock'),
+  MOCK_OTP_ALLOWED_MOBILES: z.string().default(''),
+  MOCK_OTP_ALLOWED_EMAILS: z.string().default(''),
   OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().min(5).default(30),
   OTP_EXPIRES_SECONDS: z.coerce.number().int().min(60).default(600),
   OTP_MAX_REQUESTS_PER_WINDOW: z.coerce.number().int().min(1).default(5),
@@ -41,4 +40,3 @@ const schema = z.object({
 });
 
 export const env = schema.parse(process.env);
-if (env.NODE_ENV === 'production' && env.OTP_DELIVERY_MODE === 'mock' && !env.PRODUCTION_MOCK_OTP_ALLOWED_MOBILES && !env.PRODUCTION_MOCK_OTP_ALLOWED_EMAILS) { throw new Error('Production OTP requires OTP_DELIVERY_MODE=live or explicit mock test allowlist'); }
