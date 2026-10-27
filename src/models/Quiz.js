@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 const optionSchema = new mongoose.Schema({ id: { type: String, required: true }, text: { type: String, required: true } }, { _id: false });
 const questionSchema = new mongoose.Schema({
   text: { type: String, required: true },
+  questionBankId: { type: mongoose.Schema.Types.ObjectId, ref: 'QuestionBank', default: null },
   type: { type: String, enum: ['single_choice', 'multiple_choice'], default: 'single_choice' },
   options: { type: [optionSchema], required: true, validate: v => v.length === 4 && new Set(v.map(o => o.id)).size === 4 },
   correctOptionIds: { type: [String], required: true, select: false },

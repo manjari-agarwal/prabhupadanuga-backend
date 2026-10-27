@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 import Quiz from '../models/Quiz.js';
+import QuestionBank from '../models/QuestionBank.js';
+import QuestionBankMaster from '../models/QuestionBankMaster.js';
 import QuizAttempt from '../models/QuizAttempt.js';
 import Sankalp from '../models/Sankalp.js';
 import DailyQuote from '../models/DailyQuote.js';
@@ -19,13 +21,26 @@ const parseQuiz=input=>{
   if(typeof q.text!=='string'||!q.text.trim()||q.text.length>2000||!['single_choice','multiple_choice'].includes(q.type)||!Array.isArray(q.options)||q.options.length!==4)throw new Error(`Invalid question ${i+1}`);
   const options=q.options.map((o,j)=>({id:['a','b','c','d'][j],text:String(o.text||'').trim()}));
   if(options.some(o=>!o.text||o.text.length>500)||!Array.isArray(q.correctOptionIds)||new Set(q.correctOptionIds).size!==q.correctOptionIds.length||q.correctOptionIds.some(x=>!options.some(o=>o.id===x))||q.correctOptionIds.length<1||(q.type==='single_choice'&&q.correctOptionIds.length!==1)||!Number.isInteger(Number(q.marks))||Number(q.marks)<1||Number(q.marks)>100)throw new Error(`Invalid options/answer key for question ${i+1}`);
-  return {text:q.text.trim(),type:q.type,options,correctOptionIds:q.correctOptionIds,marks:Number(q.marks),explanation:String(q.explanation||'').slice(0,3000)};
+  return {text:q.text.trim(),type:q.type,options,correctOptionIds:q.correctOptionIds,marks:Number(q.marks),explanation:String(q.explanation||'').slice(0,3000),questionBankId:q.questionBankId||null};
  });
  return {title,description,durationSeconds,questions,maxMarks:questions.reduce((n,q)=>n+q.marks,0)};
 };
 export async function listQuizzes(req,res){const {page,limit}=pager(req);const [items,total]=await Promise.all([Quiz.find().schemaLevelProjections(false).select({questions:0}).sort({createdAt:-1}).skip((page-1)*limit).limit(limit).lean(),Quiz.countDocuments()]);return good(res,{items:items.map(x=>({...x,id:String(x._id)})),pagination:{page,limit,total}});}
 export async function getQuiz(req,res){if(!valid(req.params.id))return bad(res,'Quiz not found',404);const row=await Quiz.findById(req.params.id).schemaLevelProjections(false);return row?good(res,fullQuiz(row)):bad(res,'Quiz not found',404);}
 export async function saveQuiz(req,res){try{const payload=parseQuiz(req.body);const isEdit=Boolean(req.params.id);if(isEdit&&!valid(req.params.id))return bad(res,'Quiz not found',404);const row=isEdit?await Quiz.findById(req.params.id):new Quiz();if(!row)return bad(res,'Quiz not found',404);if(isEdit&&(row.status!=='draft'||await QuizAttempt.exists({quiz:row._id})))return bad(res,'Published or previously attempted quizzes cannot be edited; create a new quiz',409);
+  // Bank references are snapshots: quiz content does not change when bank questions are edited.
+  for (let i=0;i<payload.questions.length;i++) {
+    const incoming=req.body.questions[i], question=payload.questions[i];
+    if(incoming.questionBankId){
+      if(!valid(incoming.questionBankId))return bad(res,`Invalid question-bank reference at ${i+1}`);
+      const bank=await QuestionBank.findById(incoming.questionBankId);
+      if(!bank)return bad(res,`Question bank entry missing at ${i+1}`);
+      question.questionBankId=bank._id;
+    }else if(incoming.questionBankMasterId){
+      if(!valid(incoming.questionBankMasterId)||!await QuestionBankMaster.exists({_id:incoming.questionBankMasterId}))return bad(res,`Invalid question-bank master at ${i+1}`);
+      const bank=await QuestionBank.create({...question,master:incoming.questionBankMasterId});question.questionBankId=bank._id;
+    }
+  }
   Object.assign(row,payload);await row.save();await audit(req,isEdit?'edit':'create','Quiz',row,null,{title:row.title,status:row.status});return good(res,{id:String(row._id),status:row.status},'Quiz saved');}catch(e){if(e.message.startsWith('Invalid')||e.message.startsWith('Quiz requires'))return bad(res,e.message);throw e;}}
 export async function activateQuiz(req,res){if(!valid(req.params.id))return bad(res,'Quiz not found',404);const target=await Quiz.findById(req.params.id);if(!target)return bad(res,'Quiz not found',404);if(!target.questions.length)return bad(res,'Quiz has no questions');const previous=await Quiz.findOne({isActive:true});if(previous&&String(previous.id)!==String(target.id)){previous.isActive=false;await previous.save();}try{target.isActive=true;target.status='published';await target.save();}catch(e){if(previous&&String(previous.id)!==String(target.id)){previous.isActive=true;await previous.save();}throw e;}await audit(req,'manage','Quiz',target,{previousActiveId:previous?String(previous.id):null},{isActive:true});return good(res,{id:String(target.id),isActive:true},'Quiz activated');}
 export async function deactivateQuiz(req,res){if(!valid(req.params.id))return bad(res,'Quiz not found',404);const row=await Quiz.findById(req.params.id);if(!row)return bad(res,'Quiz not found',404);row.isActive=false;await row.save();await audit(req,'manage','Quiz',row,null,{isActive:false});return good(res,{id:String(row.id),isActive:false},'Quiz deactivated');}

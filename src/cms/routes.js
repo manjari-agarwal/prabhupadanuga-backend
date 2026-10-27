@@ -8,6 +8,7 @@ import {getCmsCalendarMonth,putCmsCalendarMonth} from './calendar.controller.js'
 import {listCmsKirtans,createCmsKirtan,updateCmsKirtan,featureCmsKirtan,unfeatureCmsKirtan} from './kirtan.controller.js';
 import {contacts,contactStatus,volunteers,volunteerStatus,volunteerCategories,saveVolunteerCategory,sadhanaPractices,saveSadhanaPractice} from './operations.controller.js';
 import {listQuizzes,getQuiz,saveQuiz,activateQuiz,deactivateQuiz,quizStats,listSankalps,sankalpStatus,quoteList,saveQuote} from './content-batch.controller.js';
+import {masters,saveMaster,questions,saveQuestion,bulkQuestions,pdf} from './question-bank.controller.js';
 const router=Router();
 router.post('/auth/login',cmsLogin);
 router.post('/auth/verify-otp',cmsVerifyOtp);
@@ -33,6 +34,14 @@ router.get('/volunteer/categories',cmsPermission('volunteer','view'),volunteerCa
 router.put('/volunteer/categories',cmsPermission('volunteer','manage'),saveVolunteerCategory);
 router.get('/sadhana/practices',cmsPermission('sadhana','view'),sadhanaPractices);
 router.put('/sadhana/practices',cmsPermission('sadhana','manage'),saveSadhanaPractice);
+router.get('/question-bank/masters',cmsPermission('quiz','view'),masters);
+router.post('/question-bank/masters',cmsPermission('quiz','create'),saveMaster);
+router.put('/question-bank/masters/:id',cmsPermission('quiz','edit'),saveMaster);
+router.get('/question-bank/questions',cmsPermission('quiz','view'),questions);
+router.post('/question-bank/questions',cmsPermission('quiz','create'),saveQuestion);
+router.put('/question-bank/questions/:id',cmsPermission('quiz','edit'),saveQuestion);
+router.post('/question-bank/questions/bulk',cmsPermission('quiz','create'),bulkQuestions);
+router.get('/question-bank/export/pdf',cmsPermission('quiz','view'),pdf);
 router.get('/quizzes',cmsPermission('quiz','view'),listQuizzes);
 router.get('/quizzes/:id',cmsPermission('quiz','view'),getQuiz);
 router.post('/quizzes',cmsPermission('quiz','create'),saveQuiz);
